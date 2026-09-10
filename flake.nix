@@ -55,7 +55,7 @@
             lib,
             ...
           }:
-          rec {
+          {
             treefmt = {
               projectRootFile = "flake.nix";
 
@@ -67,7 +67,6 @@
 
             # Only concrete derivations belong in flake packages and automatic checks.
             packages = lib.filterAttrs (_: value: lib.isDerivation value) pkgsLocal;
-            checks = packages;
 
             gitHooks = {
               pre-commit = pkgsLocal.writeNushellScript "pre-commit" ''
