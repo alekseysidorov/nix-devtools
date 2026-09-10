@@ -30,7 +30,9 @@
         inherit (flake-parts-lib) importApply;
 
         # Capture nix-devtools' own inputs once, then reuse the exact same
-        # module both internally and as the public flakeModule.
+        # module both internally and as the public flakeModule. The public
+        # module must not include this repository's tests, otherwise
+        # consumers inherit its checks.
         flakeModule = importApply ./modules {
           inherit (inputs)
             crane
@@ -45,6 +47,8 @@
         imports = [
           inputs.treefmt-nix.flakeModule
           flakeModule
+          # Repository-specific development policy.
+          ./tests
         ];
 
         flake.flakeModule = flakeModule;
