@@ -21,6 +21,8 @@
     {
       checks.test-rust-dev-nextest = rustDev.checks.nextest "--workspace";
       checks.test-rust-dev-clippy = rustDev.checks.clippy "--workspace --all-targets";
+      checks.test-rust-dev-test = rustDev.checks.test "";
+      checks.test-rust-dev-doc = rustDev.checks.doc "";
       checks.test-rust-dev-audit = rustDev.checks.audit "";
     };
 }

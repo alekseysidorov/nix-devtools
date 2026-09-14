@@ -280,39 +280,3 @@ Install repository Git hooks:
 ```bash
 nix run .#install-git-hooks
 ```
-
-## Design
-
-The architecture keeps three concerns separate:
-
-```text
-overlay
-    package-set capabilities and tools
-
-flakeModule
-    reusable flake integration
-
-flake.nix
-    repository-specific policy and tests
-```
-
-Provider-owned dependencies are captured lexically when the public flake module
-is constructed. They are not published through `_module.args`.
-
-The flake module builds any package universe required by its own implementation
-from the pinned `nixpkgs` input and the public overlay. Consumers therefore do
-not need to reproduce internal package-set wiring merely to import the module.
-
-The overlay remains the explicit integration point when consumers want
-`nix-devtools` capabilities in their own `pkgs` universe.
-
-Local package discovery produces the repository's complete package namespace,
-including both derivations and reusable builder functions. Only concrete
-derivations are exported through flake `packages`; package-set capabilities stay
-in the overlay.
-
-Reusable helpers belong in the package set when they operate on a `pkgs`
-universe. Pure Nix functions belong in `lib`.
-
-The goal is to keep dependencies explicit, ambient module state minimal, and the
-public surface small and composable.
