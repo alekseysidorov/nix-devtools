@@ -17,4 +17,4 @@
 *.code-workspace
 
 # Added by cargo
-/target
+target/h
