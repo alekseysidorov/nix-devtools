@@ -1,13 +1,16 @@
 # nix-devtools
 
-Reusable Nix development tooling built around a small set of composable
-package-set capabilities and flake modules.
+Reusable Nix development tooling built around composable package-set
+capabilities and a self-contained flake-parts module.
 
-The project follows a simple split:
+The public API has two parts:
 
-- `overlays.default` exposes package-set capabilities and tools.
-- `modules.flake.*` exposes reusable flake integration.
-- `flake.nix` contains this repository's own development policy.
+- `overlays.default` exposes package-set capabilities and concrete tools through
+  `pkgs`.
+- `flakeModule` provides reusable flake-parts integration.
+
+Repository-specific development policy and tests stay in `flake.nix` and are not
+part of the public module.
 
 ## Installation
 
@@ -19,7 +22,7 @@ Add `nix-devtools` as a flake input:
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-26.05";
 
     nix-devtools = {
-      url = "github:alekseysidorov/rust-dev-flake";
+      url = "github:alekseysidorov/nix-devtools";
       inputs.nixpkgs.follows = "nixpkgs";
     };
   };
@@ -28,19 +31,16 @@ Add `nix-devtools` as a flake input:
 
 ## Overlay
 
-`overlays.default` is the main package-set API.
+`overlays.default` is the package-set API.
 
 ```nix
-pkgs = import inputs.nixpkgs {
-  inherit system;
-
-  overlays = [
-    inputs.nix-devtools.overlays.default
-  ];
-};
+pkgs =
+  inputs.nixpkgs.legacyPackages.${system}.extend
+    inputs.nix-devtools.overlays.default;
 ```
 
-It exposes development helpers and concrete packages directly through `pkgs`.
+It exposes reusable development helpers and concrete packages directly through
+`pkgs`.
 
 Examples:
 
@@ -87,8 +87,7 @@ in
 }
 ```
 
-Without an explicit toolchain, Crane uses Rust from the supplied nixpkgs package
-set.
+Without an explicit toolchain, Crane uses Rust from the supplied package set.
 
 ### Custom Rust toolchain
 
@@ -188,41 +187,67 @@ pkgs.writeNushellScript "hello" ''
 ''
 ```
 
-## Git hooks
+## Flake module
 
-The reusable Git hooks flake module turns named executable scripts into an
-installer package.
+`flakeModule` provides reusable flake-parts integration.
 
-Import the module:
+Import it from the consumer flake:
 
 ```nix
 {
   imports = [
-    inputs.nix-devtools.modules.flake.gitHooks
+    inputs.nix-devtools.flakeModule
   ];
-
-  perSystem =
-    { pkgs, ... }:
-    {
-      gitHooks = {
-        pre-commit =
-          pkgs.writeNushellScript "pre-commit" ''
-            nix fmt -- --fail-on-change
-          '';
-
-        pre-push =
-          pkgs.writeNushellScript "pre-push" ''
-            nix flake check -L
-          '';
-      };
-    };
 }
 ```
 
-This exposes:
+The module is self-contained: implementation dependencies are captured by
+`nix-devtools` itself rather than injected into the consumer's module arguments.
+
+Importing it does not import this repository's own tests or development policy.
+
+## Git hooks
+
+The flake module adds the per-system `gitHooks` option.
+
+Hook values are executable files or packages. The module exposes an installer
+as:
 
 ```text
 packages.install-git-hooks
+```
+
+A complete example:
+
+```nix
+{
+  imports = [
+    inputs.nix-devtools.flakeModule
+  ];
+
+  perSystem =
+    {
+      system,
+      ...
+    }:
+
+    let
+      pkgs =
+        inputs.nixpkgs.legacyPackages.${system}.extend
+          inputs.nix-devtools.overlays.default;
+    in
+    {
+      gitHooks = {
+        pre-commit = pkgs.writeNushellScript "pre-commit" ''
+          nix fmt -- --fail-on-change
+        '';
+
+        pre-push = pkgs.writeNushellScript "pre-push" ''
+          nix flake check -L
+        '';
+      };
+    };
+}
 ```
 
 Install the configured hooks with:
@@ -231,27 +256,12 @@ Install the configured hooks with:
 nix run .#install-git-hooks
 ```
 
-The hook values are executable files, not inline script bodies.
-
-## Reusable flake modules
-
-The project exposes reusable flake-parts modules through `modules.flake`.
-
-Currently available integrations include:
-
-```nix
-inputs.nix-devtools.modules.flake.packages
-inputs.nix-devtools.modules.flake.gitHooks
-```
-
-The modules are intended to be independently reusable. Importing a module should
-provide the capabilities required by that module without requiring consumers to
-know about internal wiring.
+The hook values are executable artifacts, not inline script bodies.
 
 ## Development
 
-This repository uses its own tooling through the same public interfaces it
-exposes to consumers.
+This repository consumes the same public overlay and flake module that it
+exposes to downstream users.
 
 Formatting:
 
@@ -273,23 +283,36 @@ nix run .#install-git-hooks
 
 ## Design
 
-The architecture intentionally keeps three concerns separate:
+The architecture keeps three concerns separate:
 
 ```text
-overlay API
-    package-set capabilities
+overlay
+    package-set capabilities and tools
 
-flake modules
-    reusable integration mechanisms
+flakeModule
+    reusable flake integration
 
 flake.nix
-    repository-specific development policy
+    repository-specific policy and tests
 ```
 
-Package definitions depend on explicit package-set capabilities rather than the
-flake `inputs` object wherever possible.
+Provider-owned dependencies are captured lexically when the public flake module
+is constructed. They are not published through `_module.args`.
 
-Reusable helpers live in the package set when they require a `pkgs` universe.
-Pure Nix functions belong in `lib`.
+The flake module builds any package universe required by its own implementation
+from the pinned `nixpkgs` input and the public overlay. Consumers therefore do
+not need to reproduce internal package-set wiring merely to import the module.
 
-The goal is to keep the public surface small, composable, and unsurprising.
+The overlay remains the explicit integration point when consumers want
+`nix-devtools` capabilities in their own `pkgs` universe.
+
+Local package discovery produces the repository's complete package namespace,
+including both derivations and reusable builder functions. Only concrete
+derivations are exported through flake `packages`; package-set capabilities stay
+in the overlay.
+
+Reusable helpers belong in the package set when they operate on a `pkgs`
+universe. Pure Nix functions belong in `lib`.
+
+The goal is to keep dependencies explicit, ambient module state minimal, and the
+public surface small and composable.
