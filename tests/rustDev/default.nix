@@ -8,12 +8,7 @@
     { system, ... }:
 
     let
-      pkgs = import inputs.nixpkgs {
-        inherit system;
-        overlays = [
-          inputs.self.overlays.default
-        ];
-      };
+      pkgs = inputs.nixpkgs.legacyPackages.${system}.extend inputs.self.overlays.default;
 
       rustDev = pkgs.mkRustDevHelpers {
         inherit pkgs;

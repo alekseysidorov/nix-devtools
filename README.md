@@ -52,7 +52,6 @@ pkgs.writeNushellScript
 pkgs.projectSource
 
 pkgs.diplomat-tool
-pkgs.comchan
 ```
 
 The default overlay also includes `rust-overlay`, so Rust toolchains are

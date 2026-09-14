@@ -1,16 +1,16 @@
-localInputs:
+moduleArgs:
 
 {
+  flake-parts-lib,
   ...
 }:
 
+let
+  inherit (flake-parts-lib) importApply;
+in
 {
-  # Only reusable capabilities are part of the public flake module.
-  # This repository's test suite is imported separately in flake.nix.
-  imports = [
+  imports = map (path: importApply path moduleArgs) [
     ./packages.nix
     ./gitHooks.nix
   ];
-
-  _module.args.localInputs = localInputs;
 }

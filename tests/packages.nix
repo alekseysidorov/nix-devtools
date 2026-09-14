@@ -8,21 +8,15 @@
     { system, ... }:
 
     let
-      pkgs = import inputs.nixpkgs {
-        inherit system;
-      };
-
-      extendedPkgs = pkgs.extend inputs.self.overlays.default;
+      pkgs = inputs.nixpkgs.legacyPackages.${system}.extend inputs.self.overlays.default;
     in
     {
       checks = {
-        test-packages-sibling-dependency = extendedPkgs.mkGitHooks {
-          pre-commit = extendedPkgs.writeNushellScript "pre-commit" ''
+        test-packages-sibling-dependency = pkgs.mkGitHooks {
+          pre-commit = pkgs.writeNushellScript "pre-commit" ''
             print "ok"
           '';
         };
-
-        test-packages-rust-overlay = extendedPkgs.comchan;
       };
     };
 }
