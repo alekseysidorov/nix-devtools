@@ -4,16 +4,21 @@
     flake-parts.url = "github:hercules-ci/flake-parts";
 
     crane.url = "github:ipetkov/crane";
+
     rust-overlay = {
       url = "github:oxalica/rust-overlay";
       inputs.nixpkgs.follows = "nixpkgs";
     };
+
     rust-advisory-db = {
       url = "github:rustsec/advisory-db";
       flake = false;
     };
 
-    treefmt-nix.url = "github:numtide/treefmt-nix";
+    treefmt-nix = {
+      url = "github:numtide/treefmt-nix";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
   };
 
   outputs =
@@ -27,7 +32,14 @@
       let
         inherit (flake-parts-lib) importApply;
 
-        # Build this repository's package set for the given nixpkgs instance.
+        lib = inputs.nixpkgs.lib;
+
+        # Pure Nix utilities exposed independently of package and module APIs.
+        nixDevtools = import ./lib {
+          inherit lib;
+        };
+
+        # Build this repository's package namespace for a given nixpkgs instance.
         localPackagesFor =
           { lib, pkgs }:
           lib.filesystem.packagesFromDirectoryRecursive {
@@ -44,32 +56,41 @@
             );
           };
 
-        # Capture nix-devtools' own inputs once, then reuse the exact same
-        # module both internally and as the public flakeModule. The public
-        # module must not include this repository's tests, otherwise
-        # consumers inherit its checks.
-        flakeModule = importApply ./modules { inherit inputs localPackagesFor; };
+        # Repository-specific checks are intentionally outside the public module.
+        repositoryChecks = nixDevtools.flakeModulesFromDirectoryRecursive ./tests;
+
+        # Capture provider-owned dependencies lexically. The same reusable module
+        # is consumed by this repository and exported to downstream flakes.
+        flakeModule = importApply ./modules {
+          inherit inputs localPackagesFor;
+        };
       in
       {
-        systems = inputs.nixpkgs.lib.systems.flakeExposed;
+        systems = lib.systems.flakeExposed;
 
         imports = [
           inputs.treefmt-nix.flakeModule
           flakeModule
-          # Repository-specific development policy.
-          ./tests
-        ];
+        ]
+        ++ repositoryChecks;
 
-        flake = { inherit flakeModule; };
+        flake = {
+          inherit flakeModule;
+          # Keep the project-specific library namespaced under the conventional
+          # flake `lib` output so it composes cleanly with other libraries.
+          lib.nixDevtools = nixDevtools;
+        };
 
         perSystem =
           {
             system,
             ...
           }:
+
           let
+            # Exercise the same public overlay exposed to downstream consumers.
             pkgs = inputs.nixpkgs.legacyPackages.${system}.extend inputs.self.overlays.default;
-            lib = inputs.nixpkgs.lib;
+
             localPackages = localPackagesFor {
               inherit lib pkgs;
             };
@@ -85,7 +106,8 @@
               };
             };
 
-            # Only concrete derivations belong in flake packages and automatic checks.
+            # The local namespace also contains builders and helper functions;
+            # only concrete derivations are valid flake package outputs.
             packages = lib.filterAttrs (_: lib.isDerivation) localPackages;
 
             gitHooks = {
