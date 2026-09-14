@@ -56,14 +56,18 @@
             );
           };
 
+        localOverlay =
+          final: _prev:
+          localPackagesFor {
+            inherit lib;
+            pkgs = final;
+          };
+
         # Repository-specific checks are intentionally outside the public module.
         repositoryChecks = nixDevtools.flakeModulesFromDirectoryRecursive ./tests;
-
         # Capture provider-owned dependencies lexically. The same reusable module
         # is consumed by this repository and exported to downstream flakes.
-        flakeModule = importApply ./modules {
-          inherit inputs localPackagesFor;
-        };
+        flakeModule = importApply ./modules inputs;
       in
       {
         systems = lib.systems.flakeExposed;
@@ -79,6 +83,10 @@
           # Keep the project-specific library namespaced under the conventional
           # flake `lib` output so it composes cleanly with other libraries.
           lib.nixDevtools = nixDevtools;
+          overlays.default = lib.composeManyExtensions [
+            inputs.rust-overlay.overlays.default
+            localOverlay
+          ];
         };
 
         perSystem =
