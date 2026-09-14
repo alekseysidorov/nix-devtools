@@ -20,6 +20,7 @@
     in
     {
       checks.test-rust-dev-nextest = rustDev.checks.nextest "--workspace";
+      checks.test-rust-dev-clippy = rustDev.checks.clippy "--workspace --all-targets";
       checks.test-rust-dev-audit = rustDev.checks.audit "";
     };
 }

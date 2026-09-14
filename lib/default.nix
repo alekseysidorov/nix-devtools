@@ -21,7 +21,10 @@
   */
   flakeModulesFromDirectoryRecursive =
     dir:
-    lib.filter (path: lib.hasSuffix ".nix" (toString path) && lib.baseNameOf path != "default.nix") (
-      lib.filesystem.listFilesRecursive dir
+    lib.collect lib.isPath (
+      lib.filesystem.packagesFromDirectoryRecursive {
+        directory = dir;
+        callPackage = path: _: path;
+      }
     );
 }
