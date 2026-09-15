@@ -16,14 +16,6 @@ let
 
   craneLib = if toolchain == null then baseCraneLib else baseCraneLib.overrideToolchain toolchain;
 
-  resolvedToolchain =
-    if toolchain == null then
-      null
-    else if builtins.isFunction toolchain then
-      toolchain pkgs.buildPackages
-    else
-      toolchain;
-
   commonArgs = {
     inherit
       src
@@ -59,8 +51,6 @@ in
     craneLib
     cargoArtifacts
     ;
-
-  toolchain = resolvedToolchain;
 
   checks = {
     nextest = mkCheck craneLib.cargoNextest "cargoNextestExtraArgs" { };
