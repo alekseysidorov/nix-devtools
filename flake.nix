@@ -65,8 +65,11 @@
 
         # Repository-specific checks are intentionally outside the public module.
         repositoryChecks = nixDevtools.flakeModulesFromDirectoryRecursive ./tests;
-        # Capture provider-owned dependencies lexically. The same reusable module
-        # is consumed by this repository and exported to downstream flakes.
+        # Pass the whole `inputs`.
+        #
+        # This keeps the module self-contained, leaking no repository-specific dependencies into the
+        # consumer's arguments, and the same module is reused here and exported to
+        # downstream flakes.
         flakeModule = importApply ./modules inputs;
       in
       {
@@ -99,6 +102,8 @@
             # Exercise the same public overlay exposed to downstream consumers.
             pkgs = inputs.nixpkgs.legacyPackages.${system}.extend inputs.self.overlays.default;
 
+            # The overlay already exposes these as package-set capabilities; they are
+            # reprojected here only to filter concrete derivations into `packages`.
             localPackages = localPackagesFor {
               inherit lib pkgs;
             };

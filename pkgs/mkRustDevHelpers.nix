@@ -14,6 +14,8 @@
 let
   baseCraneLib = crane.mkLib pkgs;
 
+  # Crane's `overrideToolchain` already resolves a function-form toolchain per
+  # platform, so the raw value is passed through unchanged.
   craneLib = if toolchain == null then baseCraneLib else baseCraneLib.overrideToolchain toolchain;
 
   commonArgs = {
@@ -36,6 +38,9 @@ let
     inherit cargoArtifacts;
   };
 
+  # Precedence is base `checkArgs`, then the caller's `args`, then fixed `extraArgs`;
+  # `extraArgs` wins so module-provided requirements (e.g. audit's `advisory-db`)
+  # can never be overridden by user-supplied cargo arguments.
   mkCheck =
     builder: extraArgsName: extraArgs: args:
     builder (

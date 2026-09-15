@@ -21,6 +21,9 @@
   */
   flakeModulesFromDirectoryRecursive =
     dir:
+    # Reuse recursive `.nix` discovery without evaluating modules: the no-op
+    # `callPackage` returns each file's path, yielding a path list rather than
+    # built packages.
     lib.collect lib.isPath (
       lib.filesystem.packagesFromDirectoryRecursive {
         directory = dir;
