@@ -15,8 +15,8 @@ inputs:
     }:
 
     let
-      # Consume this repository's own public overlay so the installed hooks match
-      # what downstream users get.
+      # Built from nix-devtools' own overlay (`inputs` is the provider's set), so the
+      # hooks match what downstream users get.
       pkgs = inputs.nixpkgs.legacyPackages.${system}.extend inputs.self.overlays.default;
     in
     {

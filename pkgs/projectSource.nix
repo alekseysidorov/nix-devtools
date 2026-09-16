@@ -3,9 +3,10 @@
 }:
 
 /*
-  Apply the root .gitignore before selecting a subdirectory.
-  projectRoot: project directory containing .gitignore; nested files are not read.
-  sourceDir: directory relative to projectRoot, or "." (default) for the whole filtered project.
+  Filter the project through its root `.gitignore`, then optionally select a
+  subdirectory of the filtered result. `sourceDir` must exist in the output.
+
+  Only the root `.gitignore` is honoured; nested `.gitignore` files are ignored.
 
   Example: projectSource { projectRoot = ./.; sourceDir = "crates"; }
 */

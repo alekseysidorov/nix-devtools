@@ -31,15 +31,14 @@
 
       let
         inherit (flake-parts-lib) importApply;
-
-        lib = inputs.nixpkgs.lib;
+        inherit (inputs.nixpkgs) lib;
 
         # Pure Nix utilities exposed independently of package and module APIs.
         nixDevtools = import ./lib {
           inherit lib;
         };
 
-        # Build this repository's package namespace for a given nixpkgs instance.
+        # Build this repository's package namespace against a given package set.
         localPackagesFor =
           { lib, pkgs }:
           lib.filesystem.packagesFromDirectoryRecursive {
@@ -65,11 +64,8 @@
 
         # Repository-specific checks are intentionally outside the public module.
         repositoryChecks = nixDevtools.flakeModulesFromDirectoryRecursive ./tests;
-        # Pass the whole `inputs`.
-        #
-        # This keeps the module self-contained, leaking no repository-specific dependencies into the
-        # consumer's arguments, and the same module is reused here and exported to
-        # downstream flakes.
+        # Pass the whole `inputs` so the module can reach `self`, which is only
+        # available through the flake's own input closure.
         flakeModule = importApply ./modules inputs;
       in
       {
@@ -101,9 +97,6 @@
           let
             # Exercise the same public overlay exposed to downstream consumers.
             pkgs = inputs.nixpkgs.legacyPackages.${system}.extend inputs.self.overlays.default;
-
-            # The overlay already exposes these as package-set capabilities; they are
-            # reprojected here only to filter concrete derivations into `packages`.
             localPackages = localPackagesFor {
               inherit lib pkgs;
             };

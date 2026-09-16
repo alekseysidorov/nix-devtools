@@ -21,6 +21,7 @@ in
 writeNushellApplication {
   name = "install-git-hooks";
 
+  # Runs on the invoking machine, so the tools come from `buildPackages`.
   runtimeInputs = [
     buildPackages.git
     buildPackages.coreutils

@@ -12,6 +12,7 @@
 
       rustDev = pkgs.mkRustDevHelpers {
         inherit pkgs;
+        # Filter through the repository root, then narrow to the fixture crate.
         src = pkgs.projectSource {
           projectRoot = ./../..;
           sourceDir = "tests/rustDev/fixtures";

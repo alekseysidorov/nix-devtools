@@ -1,17 +1,13 @@
-# lib/default.nix
-
 { lib }:
 
 {
   /**
-    Recursively discover flake module files in a directory.
+    Recursively discover flake module files in a directory as a list of paths,
+    without importing or evaluating them.
 
-    Every `.nix` file is returned except files named `default.nix`.
-    This allows a directory's `default.nix` to act as the composition root
-    while sibling and nested files are discovered automatically.
-
-    The function only discovers module paths; it does not import or evaluate
-    the modules.
+    Gotcha: this delegates to `lib.filesystem.packagesFromDirectoryRecursive`,
+    which special-cases `package.nix` — a directory holding it contributes only
+    that file and silently ignores its siblings.
 
     # Type
 
@@ -21,9 +17,6 @@
   */
   flakeModulesFromDirectoryRecursive =
     dir:
-    # Reuse recursive `.nix` discovery without evaluating modules: the no-op
-    # `callPackage` returns each file's path, yielding a path list rather than
-    # built packages.
     lib.collect lib.isPath (
       lib.filesystem.packagesFromDirectoryRecursive {
         directory = dir;
