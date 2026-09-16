@@ -3,6 +3,49 @@
   rust-advisory-db,
 }:
 
+/**
+  Build a set of Crane-based Rust checks for a project.
+
+  Dependencies are vendored and built once and the artifacts are shared by every
+  check, so `nix flake check` does not rebuild them per check.
+
+  # Arguments
+
+  `pkgs` (Package set)
+  : The package set to build with.
+
+  `src` (Path)
+  : The project source; `projectSource` produces a `.gitignore`-filtered one.
+
+  `toolchain` (Derivation or function, _optional_)
+  : Toolchain to use instead of the one in `pkgs`. A function of a package set is
+    resolved per platform by Crane; the resolved toolchain is exposed as
+    `rustc`/`cargo`/`clippy`/`rustfmt` on the returned `craneLib`.
+
+  `buildInputs`, `nativeBuildInputs` (Lists of derivations, _optional_)
+  : Extra inputs passed to every check.
+
+  # Result
+
+  `{ craneLib, cargoArtifacts, checks }`. `checks` holds `nextest`, `clippy`,
+  `test`, `doc`, and `audit` (preconfigured with the pinned advisory database);
+  each takes extra Cargo arguments, e.g. `rustDev.checks.clippy "--workspace"`.
+
+  # Example
+
+  ```nix
+  let
+    rustDev = mkRustDevHelpers {
+      inherit pkgs;
+      src = pkgs.projectSource { projectRoot = ./.; };
+    };
+  in
+  {
+    clippy = rustDev.checks.clippy "--workspace --all-targets";
+    audit = rustDev.checks.audit "";
+  }
+  ```
+*/
 {
   pkgs,
   src,
@@ -13,10 +56,6 @@
 
 let
   baseCraneLib = crane.mkLib pkgs;
-  # Crane's `overrideToolchain` resolves a function-form toolchain per platform and
-  # exposes the concrete `rustc`/`cargo`/`clippy`/`rustfmt` on the returned lib, so
-  # the raw value is passed through unchanged and consumers read the resolved
-  # toolchain from `craneLib` itself.
   craneLib = if toolchain == null then baseCraneLib else baseCraneLib.overrideToolchain toolchain;
 
   commonArgs = {

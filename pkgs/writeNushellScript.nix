@@ -4,9 +4,9 @@
 }:
 
 /*
-  Run Nu code as a standalone script: no PATH/env setup and no syntax check, and
-  the user's Nu config is loaded. Prefer writeNushellApplication beyond trivial
-  scripts.
+  Run Nu code as a standalone script: a Nu shebang plus `text`, written to the store
+  path root rather than `/bin`. Unlike writeNushellApplication it adds no
+  `$PATH`/environment setup and no syntax check.
 */
 name: text:
 writeScript name ''

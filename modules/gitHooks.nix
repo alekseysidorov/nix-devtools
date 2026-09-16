@@ -24,7 +24,7 @@ inputs:
         type = lib.types.attrsOf (lib.types.either lib.types.path lib.types.package);
 
         default = { };
-        description = "Git hook names mapped to executable script files.";
+        description = "Git hook names mapped to executable files or packages.";
       };
 
       config = lib.mkIf (config.gitHooks != { }) {

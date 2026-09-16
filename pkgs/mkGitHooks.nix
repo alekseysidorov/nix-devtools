@@ -4,6 +4,28 @@
   writeNushellApplication,
 }:
 
+/**
+  Build an `install-git-hooks` executable from a set of hooks.
+
+  Running the result inside a repository copies each hook into the directory
+  reported by `git rev-parse --git-path hooks` and marks it executable. Hooks are
+  taken as ready-made executable artifacts, not as inline script bodies.
+
+  # Arguments
+
+  `hooks` (Attribute set of paths or derivations)
+  : Hook names mapped to executable files or packages.
+
+  # Example
+
+  ```nix
+  mkGitHooks {
+    pre-commit = writeNushellScript "pre-commit" ''
+      nix fmt -- --fail-on-change
+    '';
+  }
+  ```
+*/
 hooks:
 
 let
