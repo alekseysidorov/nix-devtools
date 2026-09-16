@@ -12,6 +12,12 @@ The public API has two parts:
 Repository-specific development policy and tests stay in `flake.nix` and are not
 part of the public module.
 
+## Design decisions
+
+The rationale for the structural choices — public API shape, module hermeticity,
+package-universe policy, and toolchain handling — is recorded in
+[`docs/decisions.md`](docs/decisions.md).
+
 ## Installation
 
 Add `nix-devtools` as a flake input:

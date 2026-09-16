@@ -13,9 +13,10 @@
 
 let
   baseCraneLib = crane.mkLib pkgs;
-
-  # Crane's `overrideToolchain` already resolves a function-form toolchain per
-  # platform, so the raw value is passed through unchanged.
+  # Crane's `overrideToolchain` resolves a function-form toolchain per platform and
+  # exposes the concrete `rustc`/`cargo`/`clippy`/`rustfmt` on the returned lib, so
+  # the raw value is passed through unchanged and consumers read the resolved
+  # toolchain from `craneLib` itself.
   craneLib = if toolchain == null then baseCraneLib else baseCraneLib.overrideToolchain toolchain;
 
   commonArgs = {
