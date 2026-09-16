@@ -12,6 +12,8 @@ The public API has two parts:
 Repository-specific development policy and tests stay in `flake.nix` and are not
 part of the public module.
 
+Each public builder documents its arguments in a doc comment in its source file.
+
 ## Design decisions
 
 The rationale for the structural choices — public API shape, module hermeticity,
@@ -139,12 +141,14 @@ rustDev.checks.nextest "--workspace --all-features"
 ```
 
 The helpers share vendored dependencies and Crane build artifacts between checks
-where possible.
+where possible. The result also exposes `craneLib` and `cargoArtifacts` for
+further Crane-based derivations.
 
 ## Project sources
 
 `projectSource` applies the project's `.gitignore` before optionally selecting a
-subdirectory.
+subdirectory. Only the root `.gitignore` is honoured; nested `.gitignore` files
+are ignored.
 
 ```nix
 src = pkgs.projectSource {
@@ -193,6 +197,9 @@ pkgs.writeNushellScript "hello" ''
 ''
 ```
 
+Unlike `writeNushellApplication`, it adds no `$PATH`/environment setup and
+writes the script to the store path root rather than `/bin`.
+
 ## Flake module
 
 `flakeModule` provides reusable flake-parts integration.
@@ -214,7 +221,8 @@ Importing it does not import this repository's own tests or development policy.
 
 ## Git hooks
 
-The flake module adds the per-system `gitHooks` option.
+The flake module adds the per-system `gitHooks` option; `pkgs.mkGitHooks` is the
+underlying builder if you need the installer directly.
 
 Hook values are executable files or packages. The module exposes an installer
 as:
