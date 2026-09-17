@@ -23,111 +23,114 @@
 
   outputs =
     inputs:
-    inputs.flake-parts.lib.mkFlake { inherit inputs; } (
+    inputs.flake-parts.lib.mkFlake
       {
-        flake-parts-lib,
-        ...
-      }:
-
-      let
-        inherit (flake-parts-lib) importApply;
-        inherit (inputs.nixpkgs) lib;
-
-        # Pure Nix utilities exposed independently of package and module APIs.
-        nixDevtools = import ./lib {
-          inherit lib;
+        inherit inputs;
+        # Expose this flake's own inputs to all modules in its module graph.
+        specialArgs = {
+          localInputs = inputs;
         };
+      }
+      (
+        {
+          ...
+        }:
 
-        # Build this repository's package namespace against a given package set.
-        localPackagesFor =
-          { lib, pkgs }:
-          lib.filesystem.packagesFromDirectoryRecursive {
-            directory = ./pkgs;
-
-            callPackage = lib.callPackageWith (
-              pkgs
-              // {
-                inherit (inputs)
-                  crane
-                  rust-advisory-db
-                  ;
-              }
-            );
-          };
-
-        localOverlay =
-          final: _prev:
-          localPackagesFor {
+        let
+          inherit (inputs.nixpkgs) lib;
+          # Pure Nix utilities exposed independently of package and module APIs.
+          nixDevtools = import ./lib {
             inherit lib;
-            pkgs = final;
           };
 
-        # Repository-specific checks are intentionally outside the public module.
-        repositoryChecks = nixDevtools.flakeModulesFromDirectoryRecursive ./tests;
-        # Pass the whole `inputs` so the module can reach `self`, which is only
-        # available through the flake's own input closure.
-        flakeModule = importApply ./modules inputs;
-      in
-      {
-        systems = lib.systems.flakeExposed;
+          # Build this repository's package namespace against a given package set.
+          localPackagesFor =
+            { lib, pkgs }:
+            lib.filesystem.packagesFromDirectoryRecursive {
+              directory = ./pkgs;
 
-        imports = [
-          inputs.treefmt-nix.flakeModule
-          flakeModule
-        ]
-        ++ repositoryChecks;
-
-        flake = {
-          inherit flakeModule;
-          # Keep the project-specific library namespaced under the conventional
-          # flake `lib` output so it composes cleanly with other libraries.
-          lib.nixDevtools = nixDevtools;
-          overlays.default = lib.composeManyExtensions [
-            inputs.rust-overlay.overlays.default
-            localOverlay
-          ];
-        };
-
-        perSystem =
-          {
-            system,
-            ...
-          }:
-
-          let
-            # Exercise the same public overlay exposed to downstream consumers.
-            pkgs = inputs.nixpkgs.legacyPackages.${system}.extend inputs.self.overlays.default;
-            localPackages = localPackagesFor {
-              inherit lib pkgs;
+              callPackage = lib.callPackageWith (
+                pkgs
+                // {
+                  inherit (inputs)
+                    crane
+                    rust-advisory-db
+                    ;
+                }
+              );
             };
-          in
-          {
-            treefmt = {
-              projectRootFile = "flake.nix";
 
-              programs = {
-                nixfmt.enable = true;
-                deno.enable = true;
-                rustfmt.enable = true;
+          localOverlay =
+            final: _prev:
+            localPackagesFor {
+              inherit lib;
+              pkgs = final;
+            };
+
+          # Repository-specific checks are intentionally outside the public module.
+          repositoryChecks = nixDevtools.flakeModulesFromDirectoryRecursive ./tests;
+          flakeModule = ./modules;
+        in
+        {
+          systems = lib.systems.flakeExposed;
+
+          imports = [
+            inputs.treefmt-nix.flakeModule
+            flakeModule
+          ]
+          ++ repositoryChecks;
+
+          flake = {
+            inherit flakeModule;
+            # Keep the project-specific library namespaced under the conventional
+            # flake `lib` output so it composes cleanly with other libraries.
+            lib.nixDevtools = nixDevtools;
+            overlays.default = lib.composeManyExtensions [
+              inputs.rust-overlay.overlays.default
+              localOverlay
+            ];
+          };
+
+          perSystem =
+            {
+              system,
+              ...
+            }:
+
+            let
+              # Exercise the same public overlay exposed to downstream consumers.
+              pkgs = inputs.nixpkgs.legacyPackages.${system}.extend inputs.self.overlays.default;
+              localPackages = localPackagesFor {
+                inherit lib pkgs;
+              };
+            in
+            {
+              treefmt = {
+                projectRootFile = "flake.nix";
+
+                programs = {
+                  nixfmt.enable = true;
+                  deno.enable = true;
+                  rustfmt.enable = true;
+                };
+              };
+
+              # The local namespace also contains builders and helper functions;
+              # only concrete derivations are valid flake package outputs.
+              packages = lib.filterAttrs (_: lib.isDerivation) localPackages;
+
+              gitHooks = {
+                pre-commit = pkgs.writeNushellScript "pre-commit" ''
+                  print "⚡️ Running pre-commit checks..."
+                  nix fmt -- --fail-on-change
+                '';
+
+                pre-push = pkgs.writeNushellScript "pre-push" ''
+                  print "⚡️ Running pre-push checks..."
+                  nix flake check -L
+                '';
               };
             };
-
-            # The local namespace also contains builders and helper functions;
-            # only concrete derivations are valid flake package outputs.
-            packages = lib.filterAttrs (_: lib.isDerivation) localPackages;
-
-            gitHooks = {
-              pre-commit = pkgs.writeNushellScript "pre-commit" ''
-                print "⚡️ Running pre-commit checks..."
-                nix fmt -- --fail-on-change
-              '';
-
-              pre-push = pkgs.writeNushellScript "pre-push" ''
-                print "⚡️ Running pre-push checks..."
-                nix flake check -L
-              '';
-            };
-          };
-      }
-    );
+        }
+      );
 }

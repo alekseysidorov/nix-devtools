@@ -1,8 +1,7 @@
-inputs:
-
 {
   lib,
   flake-parts-lib,
+  localInputs,
   ...
 }:
 
@@ -17,7 +16,7 @@ inputs:
     let
       # Built from nix-devtools' own overlay (`inputs` is the provider's set), so the
       # hooks match what downstream users get.
-      pkgs = inputs.nixpkgs.legacyPackages.${system}.extend inputs.self.overlays.default;
+      pkgs = localInputs.nixpkgs.legacyPackages.${system}.extend localInputs.self.overlays.default;
     in
     {
       options.gitHooks = lib.mkOption {
