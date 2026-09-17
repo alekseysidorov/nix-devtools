@@ -45,7 +45,7 @@
 
           # Build this repository's package namespace against a given package set.
           localPackagesFor =
-            { lib, pkgs }:
+            pkgs:
             lib.filesystem.packagesFromDirectoryRecursive {
               directory = ./pkgs;
 
@@ -60,16 +60,11 @@
               );
             };
 
-          localOverlay =
-            final: _prev:
-            localPackagesFor {
-              inherit lib;
-              pkgs = final;
-            };
+          localOverlay = final: _prev: localPackagesFor final;
 
+          flakeModule = ./modules;
           # Repository-specific checks are intentionally outside the public module.
           repositoryChecks = nixDevtools.flakeModulesFromDirectoryRecursive ./tests;
-          flakeModule = ./modules;
         in
         {
           systems = lib.systems.flakeExposed;
@@ -100,9 +95,7 @@
             let
               # Exercise the same public overlay exposed to downstream consumers.
               pkgs = inputs.nixpkgs.legacyPackages.${system}.extend inputs.self.overlays.default;
-              localPackages = localPackagesFor {
-                inherit lib pkgs;
-              };
+              localPackages = localPackagesFor pkgs;
             in
             {
               treefmt = {
