@@ -1,5 +1,9 @@
+localInputs:
+
+{ flake-parts-lib, ... }:
+
 {
   imports = [
-    ./gitHooks.nix
+    (flake-parts-lib.importApply ./gitHooks.nix localInputs)
   ];
 }
