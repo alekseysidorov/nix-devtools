@@ -1,4 +1,5 @@
 {
+  buildPackages,
   lib,
   nushell,
   writeText,
@@ -75,7 +76,8 @@
   derivationArgs ? { },
 }:
 let
-  nu = lib.getExe nushell;
+  runtimeNu = lib.getExe nushell;
+  buildNu = lib.getExe buildPackages.nushell;
   runtimePath = builtins.toJSON (map (pkg: "${lib.getBin pkg}/bin") runtimeInputs);
   inheritedPath = lib.optionalString inheritPath " ++ ($env.PATH? | default [])";
 
@@ -86,7 +88,7 @@ let
   loadEnvironment = lib.optionalString (runtimeEnv != null) "load-env (open ${environment})";
 
   syntaxCheck = ''
-    target="$target" ${nu} --no-config-file -c 'nu-check --debug $env.target | if not $in { exit 1 }'
+    target="$target" ${buildNu} --no-config-file -c 'nu-check --debug $env.target | if not $in { exit 1 }'
   '';
 in
 writeTextFile {
@@ -98,7 +100,7 @@ writeTextFile {
   executable = true;
   destination = "/bin/${name}";
   text = ''
-    #!${nu} --no-config-file
+    #!${runtimeNu} --no-config-file
     ${loadEnvironment}
     $env.PATH = ${runtimePath}${inheritedPath}
     ${extraConfig}
