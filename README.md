@@ -44,10 +44,10 @@ pkgs =
     inputs.nix-devtools.overlays.default;
 ```
 
-It exposes builders (`mkRustDevHelpers`, `mkGitHooks`,
+It exposes builders (`mkRustDevHelpers`, `mkGitHooks`, `buildMdBook`,
 `writeNushellApplication`, `writeNushellScript`, `projectSource`) and concrete
-packages (`diplomat-tool`) directly through `pkgs`. It also includes
-`rust-overlay`, so Rust toolchains are available as `pkgs.rust-bin`.
+packages (`diplomat-tool`, `shell-status`) directly through `pkgs`. It also
+includes `rust-overlay`, so Rust toolchains are available as `pkgs.rust-bin`.
 
 ## Rust development
 
