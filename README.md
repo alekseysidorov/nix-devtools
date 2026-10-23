@@ -53,14 +53,15 @@ includes `rust-overlay`, so Rust toolchains are available as `pkgs.rust-bin`.
 
 `buildMdBook` builds a book with `target/book` as its configured output
 directory and exposes a `serve` package for the generated HTML. Add preprocessor
-packages through `preprocessors`; configure them in the book's `book.toml`. The
-optional `preBuild` hook prepares resources inside the isolated build directory.
+packages through `nativeBuildInputs`; configure them in the book's `book.toml`.
+The optional `preBuild` hook prepares resources inside the isolated build
+directory.
 
 ```nix
 documentation = pkgs.buildMdBook {
   pname = "project-docs";
   src = ./docs;
-  preprocessors = [ pkgs.mdbook-mermaid ];
+  nativeBuildInputs = [ pkgs.mdbook-mermaid ];
   preBuild = ''
     mdbook-mermaid install .
   '';
@@ -71,17 +72,10 @@ Here Mermaid installs its bundled JavaScript and updates the build copy of the
 book configuration. No generated files are written back to the checkout.
 Omitting both options preserves the plain mdBook build.
 
-The builder also exposes a separate PDF derivation:
-
-```console
-nix build .#documentation.pdf
-```
-
-The output is a PDF file. PDF builds use `mdbook-pdf` and a pinned Playwright
-Chromium headless shell; HTML builds do not require either. The PDF build
-enables the HTML print page and runs the same resource preparation and
-preprocessors. Keep stylesheets, fonts, and scripts local when the book must
-render without network access.
+Pass project-specific artifacts through `passthru`, for example
+`passthru.pdf = myPdfPackage`. These attributes extend the built-in `serve`
+package; a supplied `serve` overrides the default. PDF rendering and its browser
+dependencies belong to the consuming project.
 
 ## Rust development
 

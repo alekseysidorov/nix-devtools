@@ -15,26 +15,15 @@
         pname = "mdbook-mermaid-test";
         src = ./buildMdBook/fixtures;
         nativeBuildInputs = [ pkgs.mdbook-mermaid ];
+        passthru.reference = plain;
         preBuild = ''
           mdbook-mermaid install .
         '';
       };
     in
     {
-      checks.test-mdbook-pdf =
-        pkgs.runCommand "test-mdbook-pdf"
-          {
-            nativeBuildInputs = [
-              pkgs.nushell
-              pkgs.poppler-utils
-            ];
-            pdfBook = mermaid.pdf;
-          }
-          ''
-            nu --no-config-file ${./buildMdBook/pdf.nu}
-          '';
-
       checks.test-mdbook-preprocessors =
+        assert mermaid.reference == plain;
         pkgs.runCommand "test-mdbook-preprocessors"
           {
             nativeBuildInputs = [ pkgs.nushell ];
