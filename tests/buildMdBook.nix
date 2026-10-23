@@ -21,6 +21,19 @@
       };
     in
     {
+      checks.test-mdbook-pdf =
+        pkgs.runCommand "test-mdbook-pdf"
+          {
+            nativeBuildInputs = [
+              pkgs.nushell
+              pkgs.poppler-utils
+            ];
+            pdfBook = mermaid.pdf;
+          }
+          ''
+            nu --no-config-file ${./buildMdBook/pdf.nu}
+          '';
+
       checks.test-mdbook-preprocessors =
         pkgs.runCommand "test-mdbook-preprocessors"
           {

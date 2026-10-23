@@ -1,6 +1,8 @@
 {
   lib,
   mdbook,
+  mdbook-pdf,
+  playwright-driver,
   python3,
   shell-status,
   stdenvNoCC,
@@ -32,6 +34,24 @@ stdenvNoCC.mkDerivation (finalAttrs: {
     cp -r target/book "$out"
     runHook postInstall
   '';
+
+  passthru.pdf = finalAttrs.finalPackage.overrideAttrs (old: {
+    pname = "${pname}-pdf";
+    nativeBuildInputs = old.nativeBuildInputs ++ [ mdbook-pdf ];
+    preBuild = old.preBuild + ''
+      export HOME="$TMPDIR"
+      export MDBOOK_OUTPUT__PDF__COMMAND="${mdbook-pdf}/bin/mdbook-pdf"
+      export MDBOOK_OUTPUT__PDF__BROWSER_BINARY_PATH="$(find ${playwright-driver.components.chromium-headless-shell} -type f -name chrome-headless-shell)"
+      test -x "$MDBOOK_OUTPUT__PDF__BROWSER_BINARY_PATH"
+      export MDBOOK_OUTPUT__HTML__PRINT__ENABLE=true
+    '';
+    installPhase = ''
+      runHook preInstall
+      cp target/book/pdf/output.pdf "$out"
+      runHook postInstall
+    '';
+    passthru = { };
+  });
 
   passthru.serve = writeShellApplication {
     name = "${pname}-serve";

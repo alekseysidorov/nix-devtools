@@ -71,6 +71,18 @@ Here Mermaid installs its bundled JavaScript and updates the build copy of the
 book configuration. No generated files are written back to the checkout.
 Omitting both options preserves the plain mdBook build.
 
+The builder also exposes a separate PDF derivation:
+
+```console
+nix build .#documentation.pdf
+```
+
+The output is a PDF file. PDF builds use `mdbook-pdf` and a pinned Playwright
+Chromium headless shell; HTML builds do not require either. The PDF build
+enables the HTML print page and runs the same resource preparation and
+preprocessors. Keep stylesheets, fonts, and scripts local when the book must
+render without network access.
+
 ## Rust development
 
 `mkRustDevHelpers` provides shared Crane configuration and reusable Rust checks:
