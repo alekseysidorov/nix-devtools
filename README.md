@@ -49,6 +49,28 @@ It exposes builders (`mkRustDevHelpers`, `mkGitHooks`, `buildMdBook`,
 packages (`diplomat-tool`, `shell-status`) directly through `pkgs`. It also
 includes `rust-overlay`, so Rust toolchains are available as `pkgs.rust-bin`.
 
+## mdBook documentation
+
+`buildMdBook` builds a book with `target/book` as its configured output
+directory and exposes a `serve` package for the generated HTML. Add preprocessor
+packages through `preprocessors`; configure them in the book's `book.toml`. The
+optional `preBuild` hook prepares resources inside the isolated build directory.
+
+```nix
+documentation = pkgs.buildMdBook {
+  pname = "project-docs";
+  src = ./docs;
+  preprocessors = [ pkgs.mdbook-mermaid ];
+  preBuild = ''
+    mdbook-mermaid install .
+  '';
+};
+```
+
+Here Mermaid installs its bundled JavaScript and updates the build copy of the
+book configuration. No generated files are written back to the checkout.
+Omitting both options preserves the plain mdBook build.
+
 ## Rust development
 
 `mkRustDevHelpers` provides shared Crane configuration and reusable Rust checks:

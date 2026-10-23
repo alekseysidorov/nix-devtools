@@ -11,13 +11,15 @@
   pname,
   src,
   version ? "current",
+  preprocessors ? [ ],
+  preBuild ? "",
 }:
 
 stdenvNoCC.mkDerivation (finalAttrs: {
-  inherit pname version;
+  inherit pname version preBuild;
 
   src = lib.cleanSource src;
-  nativeBuildInputs = [ mdbook ];
+  nativeBuildInputs = [ mdbook ] ++ preprocessors;
 
   buildPhase = ''
     runHook preBuild

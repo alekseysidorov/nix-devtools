@@ -1,0 +1,6 @@
+[book]
+title = "Preprocessor integration test"
+src = "src"
+
+[build]
+build-dir = "target/book"
