@@ -40,9 +40,10 @@ small public APIs, and no abstraction without a semantic reason.
   `pkgs` via `localPackagesFor`. The same definition is used from
   `overlays.default` and, in `perSystem`, to project derivations into the flake
   `packages` output as `filterAttrs (_: lib.isDerivation) localPackages`.
-- **Consequence.** `diplomat-tool` and `install-git-hooks` are the only flake
-  packages. Helpers are reached through the overlay, which is the correct home
-  for package-set capabilities.
+- **Consequence.** `diplomat-tool`, `nu-lint`, and `shell-status` are the
+  concrete local packages; `install-git-hooks` is added by the module. Helpers
+  are reached through the overlay, which is the correct home for package-set
+  capabilities.
 
 ## 4. Lexical dependency capture; the whole `inputs` set is passed to the module
 
@@ -156,3 +157,31 @@ small public APIs, and no abstraction without a semantic reason.
   input. Note that Nix silently ignores a `follows` clause naming an input the
   dependency does not have, so the policy cannot be enforced mechanically and
   has to be kept by review.
+
+## 12. `nu-lint` uses a pinned `rust-overlay` toolchain
+
+- **Context.** `nu-lint` depends on `nu-parser` 0.116, which requires Rust
+  1.96.1, and uses `Option::map_or_default`, which is not available in the 1.95
+  toolchain shipped by the pinned nixpkgs.
+- **Decision.** Build `nu-lint` with `rust-bin.stable."1.99.1".minimal` from
+  `rust-overlay` through `makeRustPlatform`; a single crates.io build does not
+  need crane's shared-check machinery.
+- **Consequence.** The package does not depend on the nixpkgs Rust version, and
+  the toolchain is pinned explicitly rather than tracking `latest`.
+
+## 13. Git hooks stay minimal instead of using `git-hooks.nix`
+
+- **Context.**
+  [`cachix/git-hooks.nix`](https://flake.parts/options/git-hooks-nix.html) is
+  the batteries-included alternative: it generates a `.pre-commit-config.yaml`,
+  drives the `pre-commit` runner, ships a large catalogue of ready-made per-file
+  hooks (`nixfmt`, `deadnix`, `statix`, `clippy`, `rustfmt`, `treefmt`, …), adds
+  a sandboxed `checks` derivation, and can install hooks from a dev shell.
+- **Decision.** Keep `gitHooks` minimal: one option plus an installer, with
+  hooks as executable artifacts you write yourself.
+- **Consequence.** This fits this repository because its hooks are whole-repo
+  commands (`nix fmt`, `nix flake check`) rather than per-file linters, so the
+  pre-commit file-matching model buys nothing; and it avoids pulling in a
+  framework, its Python runtime, its own tool set, and a second configuration
+  language next to Nix. Reach for `git-hooks.nix` when you want the hook
+  catalogue, per-file filtering, and dev-shell auto-install.

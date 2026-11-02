@@ -1,23 +1,12 @@
 # nix-devtools
 
-Reusable Nix development tooling built around composable package-set
-capabilities and a self-contained flake-parts module.
+Reusable Nix development tooling exposed as a package overlay and a flake-parts
+module.
 
 The public API has two parts:
 
-- `overlays.default` — package-set capabilities and concrete tools through
-  `pkgs`.
-- `flakeModule` — reusable flake-parts integration.
-
-Repository-specific policy and tests stay in `flake.nix` and are not part of the
-module.
-
-## Design decisions
-
-Each public builder documents its arguments in a doc comment in its source file.
-The rationale for the structural choices — public API shape, module hermeticity,
-package-universe policy, and toolchain handling — is recorded in
-[`docs/decisions.md`](docs/decisions.md).
+- `overlays.default` — packages and builders through `pkgs`.
+- `flakeModule` — flake-parts integration.
 
 ## Installation
 
@@ -46,16 +35,16 @@ pkgs =
 
 It exposes builders (`mkRustDevHelpers`, `mkGitHooks`, `buildMdBook`,
 `writeNushellApplication`, `writeNushellScript`, `projectSource`) and concrete
-packages (`diplomat-tool`, `shell-status`) directly through `pkgs`. It also
-includes `rust-overlay`, so Rust toolchains are available as `pkgs.rust-bin`.
+packages (`diplomat-tool`, `nu-lint`, `shell-status`) directly through `pkgs`.
+It also includes `rust-overlay`, so Rust toolchains are available as
+`pkgs.rust-bin`.
 
 ## mdBook documentation
 
-`buildMdBook` builds a book with `target/book` as its configured output
-directory and exposes a `serve` package for the generated HTML. Add preprocessor
-packages through `nativeBuildInputs`; configure them in the book's `book.toml`.
-The optional `preBuild` hook prepares resources inside the isolated build
-directory.
+`buildMdBook` builds a book and exposes a `serve` package for the generated
+HTML. Add preprocessor packages through `nativeBuildInputs`; configure them in
+the book's `book.toml`. The optional `preBuild` hook prepares resources inside
+the isolated build directory.
 
 ```nix
 documentation = pkgs.buildMdBook {
@@ -68,9 +57,8 @@ documentation = pkgs.buildMdBook {
 };
 ```
 
-Here Mermaid installs its bundled JavaScript and updates the build copy of the
-book configuration. No generated files are written back to the checkout.
-Omitting both options preserves the plain mdBook build.
+Mermaid installs its bundled JavaScript into the build copy; the checkout is not
+modified.
 
 Pass project-specific artifacts through `passthru`, for example
 `passthru.pdf = myPdfPackage`. These attributes extend the built-in `serve`
@@ -100,9 +88,8 @@ in
 
 Check builders are `nextest`, `clippy`, `test`, `doc`, and `audit`; each takes
 extra Cargo arguments, e.g.
-`rustDev.checks.nextest "--workspace --all-features"`. Dependencies are vendored
-and built once and shared across checks, and the result also exposes `craneLib`
-and `cargoArtifacts` for further Crane-based derivations.
+`rustDev.checks.nextest "--workspace --all-features"`. The result also exposes
+`craneLib` and `cargoArtifacts` for further Crane-based derivations.
 
 Without an explicit `toolchain`, Crane uses Rust from the supplied package set.
 A custom toolchain may be a derivation or a function from a package set to a
@@ -146,6 +133,10 @@ For small standalone scripts,
 `pkgs.writeNushellScript "hello" ''print "hello"''` adds no `$PATH`/environment
 setup and writes the script to the store path root rather than `/bin`.
 
+## Nushell linting
+
+`pkgs.nu-lint` provides nu-lint 1.7.1, a linter for Nushell scripts.
+
 ## Flake module
 
 `flakeModule` provides reusable flake-parts integration:
@@ -156,10 +147,7 @@ setup and writes the script to the store path root rather than `/bin`.
 }
 ```
 
-It is self-contained — implementation dependencies are captured by
-`nix-devtools` itself rather than injected into the consumer's module arguments
-— and importing it does not bring in this repository's tests or development
-policy.
+Importing it does not bring in this repository's tests or development policy.
 
 ## Git hooks
 
@@ -193,22 +181,6 @@ exposes an installer as `packages.install-git-hooks`:
 
 Install the configured hooks with `nix run .#install-git-hooks`.
 
-### Why not `git-hooks.nix`?
-
-[`cachix/git-hooks.nix`](https://flake.parts/options/git-hooks-nix.html) is the
-batteries-included alternative: it generates a `.pre-commit-config.yaml`, drives
-the `pre-commit` runner, ships a large catalogue of ready-made per-file hooks
-(`nixfmt`, `deadnix`, `statix`, `clippy`, `rustfmt`, `treefmt`, …), adds a
-sandboxed `checks` derivation, and can install hooks from a dev shell.
-
-`gitHooks` here is deliberately minimal: one option plus an installer, with
-hooks as executable artifacts you write yourself. That fits this repository
-because its hooks are whole-repo commands (`nix fmt`, `nix flake check`) rather
-than per-file linters, so the pre-commit file-matching model buys nothing; and
-it avoids pulling in a framework, its Python runtime, its own tool set, and a
-second configuration language next to Nix. Reach for `git-hooks.nix` when you
-want the hook catalogue, per-file filtering, and dev-shell auto-install.
-
 ## Development
 
 This repository consumes the same public overlay and flake module it exposes to
@@ -219,3 +191,5 @@ nix fmt                  # format
 nix flake check -L       # run all checks
 nix run .#install-git-hooks
 ```
+
+Design rationale lives in [`docs/decisions.md`](docs/decisions.md).
